@@ -28,6 +28,24 @@ int startsWith(const char *const &LINE, const std::string &PREFIX) {
     return !PREFIX.compare(0, PREFIX.length(), LINE, PREFIX.length());
 }
 
+int pauseAfterLine(const std::string &LINE) {
+    const char *const KEYWORDS[] = {
+        "c", "continue",
+        "s", "step",
+        0
+    };
+    char ** keyword = (char**)KEYWORDS;
+    const std::string LINEWORD = LINE.substr(0, LINE.find_first_of(' '));
+
+    while(*keyword) {
+        if (LINEWORD.compare(*keyword) == 0)
+            return 1;
+        ++keyword;
+    }
+
+    return 0;
+}
+
 void gdb2script(std::ifstream &ifile, std::ofstream &sfile, std::ofstream
 &tfile) {
     static const float PAUSE = 10;
@@ -62,7 +80,7 @@ GDB_PROMPT.length() + strlen(ANSI_INPUT_COLOR) - 1;
             for (i = strlen(line + 6) + 1; i; --i) {
                 tfile << TYPING << ' ' << 1 << std::endl;
             }
-            tfile << PAUSE << ' ' << RESET_LENGTH << std::endl;
+            tfile << (pauseAfterLine(line + 6) ? PAUSE : TYPING) << ' ' << RESET_LENGTH << std::endl;
         } else if (startsWith(line, BREAKPOINT)) {
             sfile << ANSI_BREAK_COLOR << line << ANSI_RESET << std::endl;
             tfile << IMMEDIATE << ' ' << strlen(line) + BREAKPOINT_LENGTH +
