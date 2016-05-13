@@ -56,12 +56,15 @@ void gdb2script(std::ifstream &ifile, std::ofstream &sfile, std::ofstream
     static const char *const ANSI_PROMPT_COLOR = "\033[36m";
     static const char *const ANSI_INPUT_COLOR = "\033[33;1m";
     static const char *const ANSI_BREAK_COLOR = "\033[31m";
+    static const char *const ANSI_BELL = "\007";
     static const std::string GDB_PROMPT = "(gdb) ";
     static const std::string BREAKPOINT = "Breakpoint ";
     static const int PROMPT_LENGTH = strlen(ANSI_PROMPT_COLOR) +
 GDB_PROMPT.length() + strlen(ANSI_INPUT_COLOR) - 1;
     static const int RESET_LENGTH = strlen(ANSI_RESET);
     static const int BREAKPOINT_LENGTH = strlen(ANSI_BREAK_COLOR);
+    static const int BELL_LENGTH = strlen(ANSI_BELL);
+
 
     char line[201];
     size_t i;
@@ -73,14 +76,19 @@ GDB_PROMPT.length() + strlen(ANSI_INPUT_COLOR) - 1;
     ifile.getline(line, 200);
     while (ifile.good()) {
         if (startsWith(line, GDB_PROMPT)) {
+            int pause = pauseAfterLine(line + 6) ? PAUSE : 0;
             sfile << ANSI_PROMPT_COLOR << GDB_PROMPT << ANSI_INPUT_COLOR;
-            sfile << (line + 6) << ANSI_RESET << std::endl;
+            sfile << (line + 6);
+            if (pause)
+                sfile << ANSI_BELL;
+            sfile << ANSI_RESET << std::endl;
             tfile << IMMEDIATE << ' ' << PROMPT_LENGTH << std::endl;
             tfile << PROMPT << ' ' << 1 << std::endl;
-            for (i = strlen(line + 6) + 1; i; --i) {
+            i = strlen(line + 6) + (pause ? BELL_LENGTH : 0) + 1;
+            for (; i; --i) {
                 tfile << TYPING << ' ' << 1 << std::endl;
             }
-            tfile << (pauseAfterLine(line + 6) ? PAUSE : TYPING) << ' ' << RESET_LENGTH << std::endl;
+            tfile << pause + TYPING << ' ' << RESET_LENGTH << std::endl;
         } else if (startsWith(line, BREAKPOINT)) {
             sfile << ANSI_BREAK_COLOR << line << ANSI_RESET << std::endl;
             tfile << IMMEDIATE << ' ' << strlen(line) + BREAKPOINT_LENGTH +
